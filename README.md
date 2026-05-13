@@ -101,8 +101,7 @@ PCA/
 ├── docs/
 │   ├── PCA_Documentation.docx  # Full documentation
 │   └── DOCUMENTATION.md      # Markdown docs
-├── requirements.txt
-└── README.md
+└──requirements.txt
 ```
 
 ## Sample Datasets
