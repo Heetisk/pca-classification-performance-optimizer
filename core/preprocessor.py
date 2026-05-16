@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from core.config import PREPROCESSING_CONFIG, MISSING_VALUE_STRATEGY, SPLIT_CONFIG
 
 
 class DataPreprocessor:
@@ -22,10 +23,7 @@ class DataPreprocessor:
 
     def load_data(self, file) -> pd.DataFrame:
         """Load data from CSV file."""
-        if isinstance(file, str):
-            self.df = pd.read_csv(file)
-        else:
-            self.df = pd.read_csv(file)
+        self.df = pd.read_csv(file)
         return self.df
 
     def set_target(self, target_col: str):
@@ -55,22 +53,22 @@ class DataPreprocessor:
         for col in self.df.columns:
             n_unique = self.df[col].nunique()
 
-            # Good targets: 2-20 classes OR numeric with <=50 unique values
-            if n_unique >= 2 and n_unique <= 20:
+            # Good targets: 2-N classes OR numeric with <=M unique values
+            if n_unique >= PREPROCESSING_CONFIG['recommended_classes_min'] and n_unique <= PREPROCESSING_CONFIG['recommended_classes_max']:
                 recommendations.append({
                     'column': col,
                     'classes': n_unique,
                     'dtype': str(self.df[col].dtype),
                     'status': 'recommended'
                 })
-            elif n_unique > 20 and n_unique <= 50:
+            elif n_unique > PREPROCESSING_CONFIG['recommended_classes_max'] and n_unique <= PREPROCESSING_CONFIG['will_be_binned_max']:
                 recommendations.append({
                     'column': col,
                     'classes': n_unique,
                     'dtype': str(self.df[col].dtype),
                     'status': 'will_be_binned'
                 })
-            elif n_unique > 50:
+            elif n_unique > PREPROCESSING_CONFIG['will_be_binned_max']:
                 recommendations.append({
                     'column': col,
                     'classes': n_unique,
@@ -88,21 +86,18 @@ class DataPreprocessor:
         target = self.df[self.target_col]
         self.cleaning_info = {'actions': []}
 
-        # Handle text/categorical targets
         if target.dtype == 'object' or str(target.dtype).startswith('str'):
-            # Check if it can be converted to numeric
             try:
                 numeric_converted = pd.to_numeric(target, errors='coerce')
-                if numeric_converted.notna().mean() > 0.8:  # >80% can be converted
+                if numeric_converted.notna().mean() > PREPROCESSING_CONFIG['numeric_convert_threshold']:
                     self.df[self.target_col] = numeric_converted
                     self.cleaning_info['actions'].append('Converted text to numbers')
                 else:
-                    # Encode text labels to numbers
                     le = LabelEncoder()
                     self.df[self.target_col] = le.fit_transform(target.astype(str))
                     self.label_encoders[self.target_col] = le
                     self.cleaning_info['actions'].append(f'Encoded {len(le.classes_)} text labels')
-            except:
+            except Exception:
                 le = LabelEncoder()
                 self.df[self.target_col] = le.fit_transform(target.astype(str))
                 self.label_encoders[self.target_col] = le
@@ -110,10 +105,10 @@ class DataPreprocessor:
 
         # Handle too many unique values (regression -> classification by binning)
         n_unique = self.df[self.target_col].nunique()
-        if n_unique > 20:
+        if n_unique > PREPROCESSING_CONFIG['target_nunique_threshold']:
+            n_bins = PREPROCESSING_CONFIG['n_bins']
             try:
-                # Bin into 10 quantiles
-                n_bins = 10
+                # Bin into configured number of quantiles
                 binned_col = pd.qcut(
                     self.df[self.target_col],
                     q=n_bins,
@@ -123,9 +118,8 @@ class DataPreprocessor:
                 actual_bins = binned_col.nunique()
                 self.df[self.target_col] = binned_col
                 self.cleaning_info['actions'].append(f'Binned {n_unique} values into {actual_bins} categories')
-            except:
+            except Exception:
                 try:
-                    n_bins = 10
                     binned_col = pd.cut(
                         self.df[self.target_col],
                         bins=n_bins,
@@ -135,7 +129,7 @@ class DataPreprocessor:
                     actual_bins = binned_col.nunique()
                     self.df[self.target_col] = binned_col
                     self.cleaning_info['actions'].append(f'Binned {n_unique} values into {actual_bins} categories')
-                except:
+                except Exception:
                     pass  # Keep original if binning fails
 
         # Fill any NaN created during conversion
@@ -145,14 +139,17 @@ class DataPreprocessor:
             )
             self.cleaning_info['actions'].append('Filled NaN in target with mode')
 
-    def handle_missing(self, X, strategy='mean'):
+    def handle_missing(self, X, strategy=None):
         """Handle missing values in the dataset."""
         if X is None or X.shape[0] == 0:
             return X
 
+        if strategy is None:
+            strategy = MISSING_VALUE_STRATEGY
+
         X_clean = X.copy()
         for col in X_clean.columns:
-            if X_clean[col].dtype in ['float64', 'int64', 'float32', 'int32', 'float16', 'int16', 'int8', 'float16']:
+            if X_clean[col].dtype in ['float64', 'int64', 'float32', 'int32', 'float16', 'int16', 'int8']:
                 if X_clean[col].isnull().any():
                     if strategy == 'mean':
                         X_clean[col] = X_clean[col].fillna(X_clean[col].mean())
@@ -187,8 +184,13 @@ class DataPreprocessor:
             self.label_encoders[f'feature_{col}'] = le
         return X
 
-    def split_data(self, test_size=0.2, random_state=42, handle_missing='mean'):
+    def split_data(self, test_size=None, random_state=None, handle_missing=None):
         """Split data into train and test sets with automatic cleaning."""
+        if test_size is None:
+            test_size = SPLIT_CONFIG['test_size']
+        if random_state is None:
+            random_state = SPLIT_CONFIG['random_state']
+
         X = self.df.drop(columns=[self.target_col])
         y = self.df[self.target_col]
 

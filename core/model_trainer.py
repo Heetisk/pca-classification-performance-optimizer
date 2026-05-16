@@ -18,6 +18,7 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report
 )
+from core.config import MODEL_CONFIG, RANDOM_STATE
 
 
 class ModelTrainer:
@@ -25,12 +26,24 @@ class ModelTrainer:
 
     def __init__(self):
         self.models = {
-            'Logistic Regression': LogisticRegression(max_iter=1000, random_state=42),
-            'Decision Tree': DecisionTreeClassifier(random_state=42),
-            'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1),
-            'Gradient Boosting': GradientBoostingClassifier(n_estimators=100, random_state=42),
-            'SVM': SVC(random_state=42),
-            'KNN': KNeighborsClassifier(n_neighbors=5),
+            'Logistic Regression': LogisticRegression(
+                max_iter=MODEL_CONFIG['Logistic Regression'].get('max_iter', 1000),
+                random_state=RANDOM_STATE
+            ),
+            'Decision Tree': DecisionTreeClassifier(random_state=RANDOM_STATE),
+            'Random Forest': RandomForestClassifier(
+                n_estimators=MODEL_CONFIG['Random Forest'].get('n_estimators', 100),
+                random_state=RANDOM_STATE,
+                n_jobs=-1
+            ),
+            'Gradient Boosting': GradientBoostingClassifier(
+                n_estimators=MODEL_CONFIG['Gradient Boosting'].get('n_estimators', 100),
+                random_state=RANDOM_STATE
+            ),
+            'SVM': SVC(random_state=RANDOM_STATE),
+            'KNN': KNeighborsClassifier(
+                n_neighbors=MODEL_CONFIG['KNN'].get('n_neighbors', 5)
+            ),
             'Naive Bayes': GaussianNB()
         }
 

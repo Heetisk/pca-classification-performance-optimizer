@@ -6,6 +6,7 @@ Handles PCA transformation and variance analysis.
 
 import numpy as np
 from sklearn.decomposition import PCA
+from core.config import PCA_CONFIG
 
 
 class PCAAnalyzer:
@@ -48,7 +49,7 @@ class PCAAnalyzer:
             'total_variance_explained': self.cumulative_variance[-1] if len(self.cumulative_variance) > 0 else 0
         }
 
-    def get_optimal_components(self, threshold=0.95):
+    def get_optimal_components(self, threshold=None):
         """
         Get optimal number of components for a given variance threshold.
 
@@ -58,6 +59,8 @@ class PCAAnalyzer:
         Returns:
             Recommended number of components
         """
+        if threshold is None:
+            threshold = PCA_CONFIG['variance_threshold']
         if self.cumulative_variance is None:
             return None
 

@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
+from core.config import PCA_CONFIG, UI_CONFIG, CHART_COLORS
 
 
 def render_sidebar() -> dict:
@@ -42,9 +43,9 @@ def render_sidebar() -> dict:
     st.sidebar.subheader("🎯 PCA Settings")
     variance_threshold = st.sidebar.slider(
         "Variance Threshold",
-        min_value=0.80,
-        max_value=0.99,
-        value=0.95,
+        min_value=PCA_CONFIG['variance_threshold_min'],
+        max_value=PCA_CONFIG['variance_threshold_max'],
+        value=PCA_CONFIG['variance_threshold'],
         help="Minimum cumulative variance to retain"
     )
 
@@ -113,13 +114,13 @@ def render_accuracy_chart(comparison: dict):
         name='Before PCA',
         x=models,
         y=accuracy_before,
-        marker_color='lightcoral'
+        marker_color=CHART_COLORS['before_pca']['accuracy']
     ))
     fig.add_trace(go.Bar(
         name='After PCA',
         x=models,
         y=accuracy_after,
-        marker_color='mediumseagreen'
+        marker_color=CHART_COLORS['after_pca']['accuracy']
     ))
 
     fig.update_layout(
@@ -158,13 +159,13 @@ def render_time_comparison(comparison: dict):
         name='Before PCA',
         x=models,
         y=train_before,
-        marker_color='lightblue'
+        marker_color=CHART_COLORS['before_pca']['training_time']
     ))
     fig_train.add_trace(go.Bar(
         name='After PCA',
         x=models,
         y=train_after,
-        marker_color='darkblue'
+        marker_color=CHART_COLORS['after_pca']['training_time']
     ))
 
     fig_train.update_layout(
@@ -185,13 +186,13 @@ def render_time_comparison(comparison: dict):
         name='Before PCA',
         x=models,
         y=inf_before,
-        marker_color='lightsalmon'
+        marker_color=CHART_COLORS['before_pca']['inference_time']
     ))
     fig_inf.add_trace(go.Bar(
         name='After PCA',
         x=models,
         y=inf_after,
-        marker_color='darkred'
+        marker_color=CHART_COLORS['after_pca']['inference_time']
     ))
 
     fig_inf.update_layout(
@@ -216,13 +217,13 @@ def render_memory_comparison(comparison: dict):
         name='Before PCA',
         x=models,
         y=mem_before,
-        marker_color='lightgreen'
+        marker_color=CHART_COLORS['before_pca']['memory']
     ))
     fig.add_trace(go.Bar(
         name='After PCA',
         x=models,
         y=mem_after,
-        marker_color='darkgreen'
+        marker_color=CHART_COLORS['after_pca']['memory']
     ))
 
     fig.update_layout(
@@ -351,9 +352,9 @@ def render_variance_analysis(pca_results: dict):
 
     # Add threshold line
     fig2.add_hline(
-        y=0.95,
+        y=PCA_CONFIG['variance_threshold'],
         line_dash="dash",
-        annotation_text="95% threshold",
+        annotation_text=f"{int(PCA_CONFIG['variance_threshold']*100)}% threshold",
         line_color="red"
     )
 

@@ -10,6 +10,7 @@ from core.preprocessor import DataPreprocessor
 from core.pca_analyzer import PCAAnalyzer
 from core.model_trainer import ModelTrainer
 from core.performance_comparator import PerformanceComparator
+from core.config import UI_CONFIG, PCA_CONFIG, CLASSIFICATION_CONFIG, PREPROCESSING_CONFIG
 from ui.components import render_sidebar, render_results
 
 def init_session_state():
@@ -76,7 +77,7 @@ def main():
 
                 # Show data preview
                 with st.expander("📋 Data Preview"):
-                    st.dataframe(df.head(10))
+                    st.dataframe(df.head(UI_CONFIG['data_preview_rows']))
 
                 # Data preprocessing
                 st.header("⚙️ Preprocessing")
@@ -106,13 +107,24 @@ def main():
                 target_dtype = df[target_col].dtype
                 st.caption(f"Selected: {target_col} | {target_nunique} unique values | Type: {target_dtype}")
 
-                if target_nunique > 20:
-                    st.info(f"🔧 Auto-binning: {target_col} has {target_nunique} values → will be binned into ~10 categories")
+                if target_nunique > CLASSIFICATION_CONFIG['max_classes_for_classification']:
+                    st.info(f"🔧 Auto-binning: {target_col} has {target_nunique} values → will be binned into ~{PREPROCESSING_CONFIG['n_bins']} categories")
                 elif df[target_col].dtype == 'object':
                     st.info(f"🔧 Auto-encoding: {target_col} contains text → will be encoded to numbers")
 
-                test_size = st.slider("Test Set Size", 0.1, 0.4, 0.2, 0.05)
-                random_state = st.number_input("Random State", 0, 999, 42)
+                test_size = st.slider(
+                    "Test Set Size",
+                    UI_CONFIG['test_size_min'],
+                    UI_CONFIG['test_size_max'],
+                    UI_CONFIG['test_size_default'],
+                    UI_CONFIG['test_size_step']
+                )
+                random_state = st.number_input(
+                    "Random State",
+                    UI_CONFIG['random_state_min'],
+                    UI_CONFIG['random_state_max'],
+                    UI_CONFIG['random_state_default']
+                )
 
                 if st.button("🔄 Preprocess & Split Data", type="primary"):
                     try:
@@ -144,7 +156,7 @@ def main():
                     st.header("🎯 PCA Configuration")
 
                     n_features = st.session_state.X_train.shape[1]
-                    max_components = min(n_features, 50)
+                    max_components = min(n_features, PCA_CONFIG['max_components_limit'])
 
                     if max_components <= 1:
                         st.info("Dataset has only 1 feature. PCA cannot reduce dimensionality further.")
@@ -193,9 +205,9 @@ def main():
                         if st.button("🚀 Train All Models", type="primary"):
                             # Validate target is suitable for classification
                             y_unique = st.session_state.y_train.nunique()
-                            if y_unique > 20:
-                                st.error(f"❌ Target column has {y_unique} unique values (looks like regression). Please use a classification target with ≤20 classes.")
-                            elif y_unique < 2:
+                            if y_unique > CLASSIFICATION_CONFIG['max_classes_for_classification']:
+                                st.error(f"❌ Target column has {y_unique} unique values (looks like regression). Please use a classification target with ≤{CLASSIFICATION_CONFIG['max_classes_for_classification']} classes.")
+                            elif y_unique < CLASSIFICATION_CONFIG['min_classes']:
                                 st.error("❌ Target column needs at least 2 classes.")
                             else:
                                 with st.spinner("Training models... (this may take a while)"):

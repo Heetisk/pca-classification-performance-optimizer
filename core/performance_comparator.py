@@ -5,6 +5,7 @@ Compares model performance before and after PCA.
 """
 
 import numpy as np
+from core.config import PCA_CONFIG
 
 
 class PerformanceComparator:
@@ -94,11 +95,11 @@ class PerformanceComparator:
                     best_accuracy = accuracy
                     best_model = model
 
-        # Calculate recommended components (95% variance)
+        # Calculate recommended components based on variance threshold
         recommended_components = len(explained_variance)
         if len(explained_variance) > 0:
             cumulative = np.cumsum(explained_variance)
-            recommended_components = int(np.argmax(cumulative >= 0.95)) + 1
+            recommended_components = int(np.argmax(cumulative >= PCA_CONFIG['variance_threshold'])) + 1
 
         # Total variance explained
         total_variance = cumulative[-1] if len(cumulative) > 0 else 0
